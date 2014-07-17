@@ -16,15 +16,24 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 
 public class Finder {
-    private final String filename = String.valueOf(System.nanoTime());
+    private final String filename;
     private HashMap<String, String> users = new HashMap<>();
 
+    public Finder(String filename) {
+        this.filename = filename;
+    }
+
     public void start() throws IOException {
+        read();
+
         java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(Level.OFF);
 
         WebClient webClient = new WebClient(BrowserVersion.CHROME);
@@ -73,21 +82,30 @@ public class Finder {
                 users.put(uid, username);
             }
         }
+
         for (Map.Entry<String, String> s : users.entrySet()) {
             String[] row = {s.getKey(), s.getValue()};
             write(row);
         }
     }
+
     private void write(String[] row) throws IOException {
-        CSVWriter writer = new CSVWriter(new FileWriter("users.csv", true), ',');
+        CSVWriter writer = new CSVWriter(new FileWriter(filename, true), ',');
         writer.writeNext(row);
         writer.close();
     }
-    public void read() throws IOException {
-        CSVReader reader = new CSVReader(new FileReader("users.csv"));
-        String [] row;
-        while ((row = reader.readNext()) != null) {
-            System.out.println(row[0] + ", " + row[1]);
+
+    private void read() throws IOException {
+        CSVReader reader = null;
+        try {
+            reader = new CSVReader(new FileReader(filename));
+            String[] row;
+            while ((row = reader.readNext()) != null) {
+                users.put(row[0], row[1]);
+            }
+        } catch (FileNotFoundException e) {
+            Path path = Paths.get("users.csv");
+            Files.createFile(path);
         }
     }
 }
