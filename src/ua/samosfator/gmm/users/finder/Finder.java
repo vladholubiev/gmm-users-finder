@@ -27,13 +27,18 @@ public class Finder {
     static String SPREADSHEET_URL = "";
     private HashMap<String, String> users = new HashMap<>();
 
-    public void setConfig() throws IOException {
+    public void setConfig() throws InterruptedException {
         Path path = Paths.get(".config");
-        List<String> config = Files.readAllLines(path);
-        GOOGLE_ACCOUNT_USERNAME = config.get(0);
-        GOOGLE_ACCOUNT_PASSWORD = config.get(1);
-        SPREADSHEET_URL = config.get(2);
-
+        try {
+            List<String> config = Files.readAllLines(path);
+            GOOGLE_ACCOUNT_USERNAME = config.get(0);
+            GOOGLE_ACCOUNT_PASSWORD = config.get(1);
+            SPREADSHEET_URL = config.get(2);
+        } catch (IOException e) {
+            System.out.println("\nYou have to create .config file with user login, password and" +
+                    " spreadsheet link per row before launch");
+            Thread.sleep(Long.MAX_VALUE);
+        }
         LogManager.getLogManager().reset();
     }
 
