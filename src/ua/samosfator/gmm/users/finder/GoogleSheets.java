@@ -38,9 +38,12 @@ public class GoogleSheets implements Saver {
     public void write(HashMap<String, String> users) throws ServiceException, IOException {
         ListEntry row = new ListEntry();
         for (Map.Entry<String, String> s : mapDiff(read(), users).entrySet()) {
-            row.getCustomElements().setValueLocal("uid", s.getKey());
+            //Single quote is necessary to force Google Sheet treat data as a text
+            row.getCustomElements().setValueLocal("uid", "'" + s.getKey());
             row.getCustomElements().setValueLocal("username", s.getValue());
+
             System.out.println(s.getKey() + " : " + s.getValue());
+
             service.insert(listFeedUrl, row);
         }
     }

@@ -25,6 +25,7 @@ public class Finder {
     static String GOOGLE_ACCOUNT_USERNAME = "";
     static String GOOGLE_ACCOUNT_PASSWORD = "";
     static String SPREADSHEET_URL = "";
+    static int REFRESH_TIMEOUT;
     private HashMap<String, String> users = new HashMap<>();
 
     public void setConfig() throws InterruptedException {
@@ -34,6 +35,9 @@ public class Finder {
             GOOGLE_ACCOUNT_USERNAME = config.get(0);
             GOOGLE_ACCOUNT_PASSWORD = config.get(1);
             SPREADSHEET_URL = config.get(2);
+            REFRESH_TIMEOUT = Integer.parseInt(config.get(3).replaceAll("\\D", ""));
+
+            System.out.println();
         } catch (IOException e) {
             System.out.println("\nYou have to create .config file with user login, password and" +
                     " spreadsheet link per row before launch");
@@ -63,7 +67,7 @@ public class Finder {
                 } catch (Exception ignored) {
                 }
             }
-        }, 0, 60000);
+        }, 0, REFRESH_TIMEOUT * 1000);
 
         webClient.closeAllWindows();
     }
@@ -105,8 +109,7 @@ public class Finder {
             if (str.indexOf("gaia_id\":") > 0 && strNext.indexOf("profile_name\":") > 0) {
                 String uid = str.replaceAll("\\D*", "");
                 String username = strNext.replaceAll("(.*):", "").replaceAll("\"", "");
-                //Temporary hack: necessary to set cell format as text instead of number
-                users.put(uid + "?", username);
+                users.put(uid, username);
             }
         }
     }
