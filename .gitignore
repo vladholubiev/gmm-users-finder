@@ -8,4 +8,5 @@ out/
 *-doc.jar
 *-javadoc.jar
 *-sources.jar
+.config
 thumbs.db

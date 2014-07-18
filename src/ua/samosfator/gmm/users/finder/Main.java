@@ -1,21 +1,15 @@
 package ua.samosfator.gmm.users.finder;
 
-import java.awt.image.BufferedImage;
+import com.google.gdata.util.ServiceException;
+
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class Main {
-
-    public static void main(String[] args) throws IOException {
-        Finder userFinder = new Finder("users.csv");
-
-        new Timer().scheduleAtFixedRate(new TimerTask() {
-            public void run() {
-                try {
-                    userFinder.start();
-                } catch (IOException e) {e.printStackTrace();}
-            }
-        }, 0, 120000);
+    public static void main(String[] args) throws IOException, ServiceException {
+        Finder userFinder = new Finder();
+        userFinder.setConfig();
+        userFinder.start();
     }
 }

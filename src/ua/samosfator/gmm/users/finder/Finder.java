@@ -1,39 +1,42 @@
 package ua.samosfator.gmm.users.finder;
 
-import au.com.bytecode.opencsv.CSVReader;
-import au.com.bytecode.opencsv.CSVWriter;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.NicelyResynchronizingAjaxController;
+import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.google.gdata.util.ServiceException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Level;
 
 public class Finder {
-    private final String filename;
     private HashMap<String, String> users = new HashMap<>();
+    static String GOOGLE_ACCOUNT_USERNAME = "";
+    static String GOOGLE_ACCOUNT_PASSWORD = "";
+    static String SPREADSHEET_URL = "";
 
-    public Finder(String filename) {
-        this.filename = filename;
+    public void setConfig() throws IOException {
+        Path path = Paths.get(".config");
+        List<String> config = Files.readAllLines(path);
+        GOOGLE_ACCOUNT_USERNAME = config.get(0);
+        GOOGLE_ACCOUNT_PASSWORD = config.get(1);
+        SPREADSHEET_URL = config.get(2);
     }
 
-    public void start() throws IOException {
-        read();
-
+    public void start() throws IOException, ServiceException {
         java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(Level.OFF);
 
         WebClient webClient = new WebClient(BrowserVersion.CHROME);
@@ -48,15 +51,24 @@ public class Finder {
         HtmlPage mainPage = form.getInputByName("signIn").click();
         webClient.setAjaxController(new NicelyResynchronizingAjaxController());
 
-        parse(mainPage.asXml());
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+                try {
+                    HtmlPage refreshed = webClient.getPage("http://www.google.com.ua/mapmaker?hl=en");
+                    parse(refreshed.asXml());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 0, 120000);
 
         webClient.closeAllWindows();
     }
 
-    private void parse(String html) throws IOException {
+    private void parse(String html) throws IOException, ServiceException {
         Document doc = Jsoup.parse(html);
         Elements script = doc.select("script");
-        String raw = null;
+        String raw = "";
 
         for (Element e : script) {
             String scriptEl = e.toString();
@@ -74,38 +86,18 @@ public class Finder {
         String[] rawSplit = raw.split(",");
         for (int i = 0; i < rawSplit.length - 1; i++) {
             String str = rawSplit[i];
-            String strNext = rawSplit[i+1];
+            String strNext = rawSplit[i + 1];
 
             if (str.indexOf("gaia_id\":") > 0 && strNext.indexOf("profile_name\":") > 0) {
                 String uid = str.replaceAll("\\D*", "");
                 String username = strNext.replaceAll("(.*):", "").replaceAll("\"", "");
-                users.put(uid, username);
+                //Temporary hack: necessary to set cell format as text instead of number
+                users.put(uid + "?", username);
             }
         }
 
-        for (Map.Entry<String, String> s : users.entrySet()) {
-            String[] row = {s.getKey(), s.getValue()};
-            write(row);
-        }
-    }
-
-    private void write(String[] row) throws IOException {
-        CSVWriter writer = new CSVWriter(new FileWriter(filename, true), ',');
-        writer.writeNext(row);
-        writer.close();
-    }
-
-    private void read() throws IOException {
-        CSVReader reader = null;
-        try {
-            reader = new CSVReader(new FileReader(filename));
-            String[] row;
-            while ((row = reader.readNext()) != null) {
-                users.put(row[0], row[1]);
-            }
-        } catch (FileNotFoundException e) {
-            Path path = Paths.get("users.csv");
-            Files.createFile(path);
-        }
+        Saver gSheets = new GoogleSheets();
+        gSheets.prepare();
+        gSheets.write(users);
     }
 }
