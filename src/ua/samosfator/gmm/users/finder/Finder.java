@@ -2,7 +2,6 @@ package ua.samosfator.gmm.users.finder;
 
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.NicelyResynchronizingAjaxController;
-import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
@@ -20,13 +19,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.Level;
+import java.util.logging.LogManager;
 
 public class Finder {
-    private HashMap<String, String> users = new HashMap<>();
     static String GOOGLE_ACCOUNT_USERNAME = "";
     static String GOOGLE_ACCOUNT_PASSWORD = "";
     static String SPREADSHEET_URL = "";
+    private HashMap<String, String> users = new HashMap<>();
 
     public void setConfig() throws IOException {
         Path path = Paths.get(".config");
@@ -34,21 +33,21 @@ public class Finder {
         GOOGLE_ACCOUNT_USERNAME = config.get(0);
         GOOGLE_ACCOUNT_PASSWORD = config.get(1);
         SPREADSHEET_URL = config.get(2);
+
+        LogManager.getLogManager().reset();
     }
 
     public void start() throws IOException, ServiceException {
-        java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(Level.OFF);
-
         WebClient webClient = new WebClient(BrowserVersion.CHROME);
         webClient.getOptions().setThrowExceptionOnScriptError(false);
-        webClient.getOptions().setJavaScriptEnabled(true);
+        webClient.getOptions().setJavaScriptEnabled(false);
 
         HtmlPage loginPage = webClient.getPage("https://accounts.google.com/ServiceLogin?hl=en&continue=http://www.google.com.ua/mapmaker%3Fhl%3Den&service=geowiki");
 
         HtmlForm form = loginPage.getForms().get(0);
         form.getInputByName("Email").setValueAttribute("mapmaker.users@gmail.com");
         form.getInputByName("Passwd").setValueAttribute("mNTUxyzk7HAp");
-        HtmlPage mainPage = form.getInputByName("signIn").click();
+        form.getInputByName("signIn").click();
         webClient.setAjaxController(new NicelyResynchronizingAjaxController());
 
         new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -56,11 +55,10 @@ public class Finder {
                 try {
                     HtmlPage refreshed = webClient.getPage("http://www.google.com.ua/mapmaker?hl=en");
                     parse(refreshed.asXml());
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (Exception ignored) {
                 }
             }
-        }, 0, 120000);
+        }, 0, 60000);
 
         webClient.closeAllWindows();
     }
@@ -83,7 +81,18 @@ public class Finder {
                 raw = "{\"review_form_data:" + raw.substring(0, raw.length() - 2) + "}";
             }
         }
+        extractUsers(raw);
+
+        Saver gSheets = new GoogleSheets();
+        gSheets.prepare();
+        gSheets.write(users);
+    }
+
+    private void extractUsers(String raw) {
         String[] rawSplit = raw.split(",");
+        for (String s : rawSplit) {
+            if (!s.contains("gaia_id\":") || !s.contains("profile_name\":")) s = null;
+        }
         for (int i = 0; i < rawSplit.length - 1; i++) {
             String str = rawSplit[i];
             String strNext = rawSplit[i + 1];
@@ -95,9 +104,5 @@ public class Finder {
                 users.put(uid + "?", username);
             }
         }
-
-        Saver gSheets = new GoogleSheets();
-        gSheets.prepare();
-        gSheets.write(users);
     }
 }

@@ -14,7 +14,6 @@ import java.util.Map;
 public class GoogleSheets implements Saver {
     private SpreadsheetService service;
     private URL listFeedUrl;
-    private URL cellFeedUrl;
 
     public void prepare() throws ServiceException, IOException {
         service = new SpreadsheetService("Print Google Spreadsheet Demo");
@@ -38,19 +37,19 @@ public class GoogleSheets implements Saver {
 
     public void write(HashMap<String, String> users) throws ServiceException, IOException {
         ListEntry row = new ListEntry();
-        //Get users which don't exist in Google Sheet
-        Map<String, String> existing = read();
-        Map<String, String> toSend = new HashMap<>();
-
-        toSend.putAll(existing);
-        toSend.putAll(users);
-        toSend.entrySet().removeAll(existing.entrySet());
-
-        for (Map.Entry<String, String> s : toSend.entrySet()) {
+        for (Map.Entry<String, String> s : mapDiff(read(), users).entrySet()) {
             row.getCustomElements().setValueLocal("uid", s.getKey());
             row.getCustomElements().setValueLocal("username", s.getValue());
             System.out.println(s.getKey() + " : " + s.getValue());
             service.insert(listFeedUrl, row);
         }
+    }
+
+    public static HashMap<String, String> mapDiff(HashMap<String, String> a, HashMap<String, String> b) {
+        HashMap<String, String> diff = new HashMap<>();
+        diff.putAll(a);
+        diff.putAll(b);
+        diff.entrySet().removeAll(a.entrySet());
+        return diff;
     }
 }
