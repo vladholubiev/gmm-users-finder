@@ -47,7 +47,7 @@ public class GoogleSheets implements Saver {
         toSend.entrySet().removeAll(existing.entrySet());
 
         for (Map.Entry<String, String> s : toSend.entrySet()) {
-            row.getCustomElements().setValueLocal("uid", s.getKey() + "?");
+            row.getCustomElements().setValueLocal("uid", s.getKey());
             row.getCustomElements().setValueLocal("username", s.getValue());
             System.out.println(s.getKey() + " : " + s.getValue());
             service.insert(listFeedUrl, row);

@@ -39,6 +39,4 @@ public class CSV implements Saver {
             writer.close();
         }
     }
-
-
 }
