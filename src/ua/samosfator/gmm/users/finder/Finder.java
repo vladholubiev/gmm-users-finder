@@ -12,39 +12,12 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.LogManager;
 
 public class Finder {
-    static String GOOGLE_ACCOUNT_USERNAME = "";
-    static String GOOGLE_ACCOUNT_PASSWORD = "";
-    static String SPREADSHEET_URL = "";
-    static int REFRESH_TIMEOUT;
     private HashMap<String, String> users = new HashMap<>();
-
-    public void setConfig() throws InterruptedException {
-        Path path = Paths.get(".config");
-        try {
-            List<String> config = Files.readAllLines(path);
-            GOOGLE_ACCOUNT_USERNAME = config.get(0);
-            GOOGLE_ACCOUNT_PASSWORD = config.get(1);
-            SPREADSHEET_URL = config.get(2);
-            REFRESH_TIMEOUT = Integer.parseInt(config.get(3).replaceAll("\\D", ""));
-
-            System.out.println();
-        } catch (IOException e) {
-            System.out.println("\nYou have to create .config file with user login, password and" +
-                    " spreadsheet link per row before launch");
-            Thread.sleep(Long.MAX_VALUE);
-        }
-        LogManager.getLogManager().reset();
-    }
 
     public void start() throws IOException, ServiceException {
         WebClient webClient = new WebClient(BrowserVersion.CHROME);
@@ -54,8 +27,8 @@ public class Finder {
         HtmlPage loginPage = webClient.getPage("https://accounts.google.com/ServiceLogin?hl=en&continue=http://www.google.com.ua/mapmaker%3Fhl%3Den&service=geowiki");
 
         HtmlForm form = loginPage.getForms().get(0);
-        form.getInputByName("Email").setValueAttribute("mapmaker.users@gmail.com");
-        form.getInputByName("Passwd").setValueAttribute("mNTUxyzk7HAp");
+        form.getInputByName("Email").setValueAttribute(Config.GOOGLE_ACCOUNT_USERNAME);
+        form.getInputByName("Passwd").setValueAttribute(Config.GOOGLE_ACCOUNT_PASSWORD);
         form.getInputByName("signIn").click();
         webClient.setAjaxController(new NicelyResynchronizingAjaxController());
 
@@ -67,7 +40,7 @@ public class Finder {
                 } catch (Exception ignored) {
                 }
             }
-        }, 0, REFRESH_TIMEOUT * 1000);
+        }, 0, Config.REFRESH_TIMEOUT * 1000);
 
         webClient.closeAllWindows();
     }
@@ -99,9 +72,6 @@ public class Finder {
 
     private void extractUsers(String raw) {
         String[] rawSplit = raw.split(",");
-        for (String s : rawSplit) {
-            if (!s.contains("gaia_id\":") || !s.contains("profile_name\":")) s = null;
-        }
         for (int i = 0; i < rawSplit.length - 1; i++) {
             String str = rawSplit[i];
             String strNext = rawSplit[i + 1];

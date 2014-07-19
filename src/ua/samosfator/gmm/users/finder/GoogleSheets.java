@@ -17,8 +17,8 @@ public class GoogleSheets implements Saver {
 
     public void prepare() throws ServiceException, IOException {
         service = new SpreadsheetService("Print Google Spreadsheet Demo");
-        service.setUserCredentials(Finder.GOOGLE_ACCOUNT_USERNAME, Finder.GOOGLE_ACCOUNT_PASSWORD);
-        URL metaFeedUrl = new URL(Finder.SPREADSHEET_URL);
+        service.setUserCredentials(Config.GOOGLE_ACCOUNT_USERNAME, Config.GOOGLE_ACCOUNT_PASSWORD);
+        URL metaFeedUrl = new URL(Config.SPREADSHEET_URL);
         SpreadsheetEntry spreadsheet = service.getEntry(metaFeedUrl, SpreadsheetEntry.class);
         listFeedUrl = spreadsheet.getWorksheets().get(0).getListFeedUrl();
     }
